@@ -1,0 +1,43 @@
+# ============================================================
+# Python / Django
+# ============================================================
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Base de données locale
+backend/db.sqlite3
+
+# Secrets — NE JAMAIS COMMITER
+backend/.env
+.env
+*.env
+
+# Fichiers de migration compilés
+backend/**/migrations/__pycache__/
+
+# Billets PDF générés
+backend/tickets/*.pdf
+
+# ============================================================
+# Angular / Node
+# ============================================================
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/cache/
+frontend/.angular/
+
+# ============================================================
+# Éditeurs / OS
+# ============================================================
+.vscode/settings.json
+.idea/
+*.DS_Store
+Thumbs.db

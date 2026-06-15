@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: easy-reserve-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt && cd backend && python manage.py collectstatic --noinput && python manage.py migrate
+    startCommand: cd backend && gunicorn EasyReserve.wsgi
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: FRONTEND_URL
+        value: https://easy-reserve-frontend-propre-iota.vercel.app
+    disk:
+      name: easy-reserve-data
+      mountPath: /data
+      sizeGB: 1
+databases:
+  - name: easy-reserve-db
+    databaseName: easy_reserve
+    user: easy_reserve
+    plan: free
