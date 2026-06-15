@@ -1,0 +1,156 @@
+<div class="container py-4">
+  
+  <!-- Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <h2 class="fw-bold mb-0">
+      <i class="bi bi-person-gear text-primary me-2"></i>Mon Profil
+    </h2>
+    <a routerLink="/client/trajets" class="btn btn-outline-primary d-flex align-items-center gap-2 shadow-sm">
+      <i class="bi bi-arrow-left-circle fs-5"></i>
+      <span class="fw-semibold">Retour aux trajets</span>
+    </a>
+  </div>
+
+  <!-- Loading -->
+  @if (loading) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+      <p class="text-muted mt-3">Chargement du profil...</p>
+    </div>
+  }
+
+  <!-- Error / Success Message -->
+  @if (message.text) {
+    <div class="alert alert-{{ message.type === 'success' ? 'success' : 'danger' }} shadow-sm d-flex align-items-center">
+      <i class="bi bi-{{ message.type === 'success' ? 'check-circle' : 'exclamation-circle' }} me-2 fs-5"></i>
+      {{ message.text }}
+    </div>
+  }
+
+  <!-- Profile Content -->
+  @if (user && !loading) {
+    <div class="row g-4">
+      
+      <!-- Left: Avatar & Quick Info -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm text-center p-4">
+          <div class="profile-avatar mb-3 mx-auto">
+            <img [src]="getAvatarUrl()" alt="Photo de profil" class="avatar-img" />
+            <div class="avatar-overlay" *ngIf="isEditing">
+              <i class="bi bi-camera-fill"></i>
+            </div>
+          </div>
+          
+          <h4 class="fw-bold mb-1">{{ user.first_name }} {{ user.last_name }}</h4>
+          <p class="text-muted small mb-3">@{{ user.username }}</p>
+          
+          <div class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 mb-3">
+            <i class="bi bi-shield-check me-1"></i>Compte {{ user.role || 'Client' }}
+          </div>
+
+          @if (!isEditing) {
+            <button class="btn btn-primary w-100" (click)="toggleEdit()">
+              <i class="bi bi-pencil-square me-2"></i>Modifier le profil
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Right: Details & Form -->
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-bottom py-3">
+            <h5 class="mb-0 fw-semibold">
+              {{ isEditing ? '✏️ Modifier mes informations' : '📋 Informations personnelles' }}
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            
+            @if (isEditing) {
+              <!-- ✅ MODE ÉDITION -->
+              <form [formGroup]="userForm" (ngSubmit)="saveProfile()">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Prénom *</label>
+                    <input type="text" formControlName="first_name" class="form-control" />
+                    @if (userForm.get('first_name')?.invalid && userForm.get('first_name')?.touched) {
+                      <small class="text-danger">Requis (min. 2 caractères)</small>
+                    }
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Nom *</label>
+                    <input type="text" formControlName="last_name" class="form-control" />
+                    @if (userForm.get('last_name')?.invalid && userForm.get('last_name')?.touched) {
+                      <small class="text-danger">Requis (min. 2 caractères)</small>
+                    }
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-bold">Email *</label>
+                    <input type="email" formControlName="email" class="form-control" />
+                    @if (userForm.get('email')?.invalid && userForm.get('email')?.touched) {
+                      <small class="text-danger">Email invalide</small>
+                    }
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-bold">Téléphone</label>
+                    <input type="tel" formControlName="telephone" class="form-control" placeholder="Ex: 699123456" />
+                    @if (userForm.get('telephone')?.invalid && userForm.get('telephone')?.touched) {
+                      <small class="text-danger">Format invalide (9-15 chiffres)</small>
+                    }
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-bold">Photo de profil</label>
+                    <input type="file" class="form-control" accept="image/*" (change)="onFileSelected($event)" />
+                    <small class="text-muted">JPG, PNG ou GIF. Max 5 Mo.</small>
+                  </div>
+                  <div class="col-12 d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary px-4" [disabled]="loading || userForm.invalid">
+                      @if (loading) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                      Enregistrer
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary px-4" (click)="toggleEdit()">Annuler</button>
+                  </div>
+                </div>
+              </form>
+            } @else {
+              <!-- ✅ MODE AFFICHAGE -->
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <div class="info-block">
+                    <small class="text-muted text-uppercase fw-bold">Prénom</small>
+                    <p class="fs-5 mb-0">{{ user.first_name || 'N/A' }}</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="info-block">
+                    <small class="text-muted text-uppercase fw-bold">Nom</small>
+                    <p class="fs-5 mb-0">{{ user.last_name || 'N/A' }}</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="info-block">
+                    <small class="text-muted text-uppercase fw-bold">Email</small>
+                    <p class="fs-5 mb-0">{{ user.email }}</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="info-block">
+                    <small class="text-muted text-uppercase fw-bold">Téléphone</small>
+                    <p class="fs-5 mb-0">{{ user.telephone || 'Non renseigné' }}</p>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="info-block">
+                    <small class="text-muted text-uppercase fw-bold">Membre depuis</small>
+                    <p class="fs-5 mb-0">{{ user.date_joined ? (user.date_joined | date:'dd MMMM yyyy') : 'N/A' }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

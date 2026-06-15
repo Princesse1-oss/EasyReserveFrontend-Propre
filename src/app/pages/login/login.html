@@ -1,0 +1,61 @@
+<div class="auth-page">
+  <section class="auth-visual">
+    <a routerLink="/" class="auth-brand">
+      <span><i class="bi bi-bus-front"></i></span>
+      EasyReserve
+    </a>
+    <div class="visual-copy">
+      <p>Reservation de bus en ligne</p>
+      <h1>Connectez-vous pour gerer vos voyages.</h1>
+      <span>Recherchez vos trajets, consultez vos billets et suivez vos reservations depuis un espace securise.</span>
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <div class="auth-card">
+      <div class="card-heading">
+        <span class="panel-icon"><i class="bi bi-shield-lock"></i></span>
+        <h2>Connexion</h2>
+        <p>Accedez a votre compte client, gestionnaire ou administrateur.</p>
+      </div>
+
+      <div *ngIf="erreur" class="alert-banner error">
+        <i class="bi bi-exclamation-triangle"></i>
+        {{ erreur }}
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="username">Nom d'utilisateur</label>
+          <div class="input-shell">
+            <i class="bi bi-person"></i>
+            <input type="text" id="username" formControlName="username" placeholder="Ex: merveillen" />
+          </div>
+          <span class="field-error" *ngIf="username?.invalid && username?.touched">
+            Nom d'utilisateur obligatoire.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <div class="input-shell">
+            <i class="bi bi-lock"></i>
+            <input type="password" id="password" formControlName="password" placeholder="Votre mot de passe" />
+          </div>
+          <span class="field-error" *ngIf="password?.invalid && password?.touched">
+            Mot de passe requis (min. 4 caracteres).
+          </span>
+        </div>
+
+        <button type="submit" [disabled]="loginForm.invalid || loading" class="btn-rebus-primary submit-btn">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+          {{ loading ? 'Connexion...' : 'Se connecter' }}
+        </button>
+      </form>
+
+      <p class="auth-footer">
+        Nouveau sur EasyReserve? <a routerLink="/register">Creer un compte</a>
+      </p>
+    </div>
+  </section>
+</div>

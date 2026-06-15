@@ -1,0 +1,141 @@
+<nav class="client-topbar">
+  <a routerLink="/client/trajets" class="brand">
+    <span><i class="bi bi-bus-front"></i></span>
+    EasyReserve
+  </a>
+
+  <div class="client-links">
+    <a routerLink="/client/trajets" routerLinkActive="active">Trajets</a>
+    <a routerLink="/client/reservations" routerLinkActive="active">Reservations</a>
+    <a routerLink="/client/profil" routerLinkActive="active">Profil</a>
+  </div>
+
+  <div class="user-chip">
+    <img [src]="getUserAvatar()" alt="Avatar utilisateur" />
+    <span>{{ getUserName() }}</span>
+    <button type="button" (click)="logout()" title="Deconnexion">
+      <i class="bi bi-box-arrow-right"></i>
+    </button>
+  </div>
+</nav>
+
+<main class="client-page">
+  <section class="client-hero">
+    <div>
+      <span class="eyebrow">Espace client</span>
+      <h1>Trouvez votre prochain depart</h1>
+      <p>Comparez les horaires, les tarifs et les places restantes avant de reserver votre billet REBUS.</p>
+    </div>
+  </section>
+
+  <section class="search-card">
+    <form [formGroup]="searchForm" (ngSubmit)="search()">
+      <div class="field">
+        <label>Ville de depart</label>
+        <div class="input-shell">
+          <i class="bi bi-geo-alt"></i>
+          <input type="text" formControlName="ville_depart" placeholder="Ex: Yaounde"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Destination</label>
+        <div class="input-shell">
+          <i class="bi bi-pin-map"></i>
+          <input type="text" formControlName="ville_arrivee" placeholder="Ex: Douala"/>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Date de voyage</label>
+        <div class="input-shell">
+          <i class="bi bi-calendar3"></i>
+          <input type="date" formControlName="date_depart" [min]="today"/>
+        </div>
+      </div>
+
+      <div class="search-actions">
+        <button type="submit" class="btn-rebus-primary" [disabled]="loading">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+          Rechercher
+        </button>
+        <button type="button" class="btn-rebus-secondary" (click)="resetSearch()" [disabled]="loading" title="Reinitialiser">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+      </div>
+    </form>
+  </section>
+
+  @if (errorMessage) {
+    <div class="state-banner error">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <strong>Impossible de charger les trajets</strong>
+        <span>{{ errorMessage }}</span>
+      </div>
+      <button class="btn-rebus-secondary" (click)="loadTrajets()">Reessayer</button>
+    </div>
+  }
+
+  @if (loading && !searched) {
+    <div class="empty-state">
+      <span class="spinner-border text-primary"></span>
+      <p>Chargement des trajets disponibles...</p>
+    </div>
+  } @else if (trajets.length === 0 && searched && !errorMessage) {
+    <div class="empty-state">
+      <i class="bi bi-search"></i>
+      <h2>Aucun trajet trouve</h2>
+      <p>Modifiez les villes ou la date de voyage pour elargir votre recherche.</p>
+    </div>
+  } @else if (trajets.length > 0) {
+    <section class="results-head">
+      <div>
+        <span class="eyebrow">Resultats</span>
+        <h2>{{ trajets.length }} trajet(s) disponible(s)</h2>
+      </div>
+    </section>
+
+    <section class="trajets-grid">
+      @for (t of trajets; track t.id) {
+        <article class="trajet-card">
+          <header>
+            <span class="bus-type"><i class="bi bi-bus-front"></i>{{ getBusType(t) }}</span>
+            <span class="places" [class.low]="t.places_disponibles <= 5">
+              {{ t.places_disponibles }} places
+            </span>
+          </header>
+
+          <div class="route">
+            <div>
+              <small>Depart</small>
+              <strong>{{ t.ville_depart }}</strong>
+            </div>
+            <i class="bi bi-arrow-right"></i>
+            <div class="text-end">
+              <small>Arrivee</small>
+              <strong>{{ t.ville_arrivee }}</strong>
+            </div>
+          </div>
+
+          <div class="meta-grid">
+            <span><i class="bi bi-calendar3"></i>{{ formatDate(t.date_depart) }}</span>
+            <span><i class="bi bi-clock"></i>{{ t.heure_depart }}</span>
+            <span><i class="bi bi-building"></i>{{ getAgency(t) }}</span>
+          </div>
+
+          <footer>
+            <div>
+              <small>Tarif</small>
+              <strong>{{ formatPrice(t.prix) }}</strong>
+            </div>
+            <button *ngIf="t.places_disponibles > 0" type="button" (click)="goToTrajetDetail(t.id)">
+              Voir et reserver
+            </button>
+            <button *ngIf="t.places_disponibles <= 0" type="button" disabled>Complet</button>
+          </footer>
+        </article>
+      }
+    </section>
+  }
+</main>

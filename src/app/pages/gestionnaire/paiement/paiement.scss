@@ -1,0 +1,30 @@
+@use "../reservations/reservations.scss";
+
+.status-badge.valide {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.status-badge.echoue {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.status-badge.en_attente {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.filter-panel {
+  grid-template-columns: 1fr 220px 220px auto;
+}
+
+.page-header .btn-rebus-primary {
+  width: auto;
+}
+
+@media (max-width: 980px) {
+  .filter-panel {
+    grid-template-columns: 1fr;
+  }
+}

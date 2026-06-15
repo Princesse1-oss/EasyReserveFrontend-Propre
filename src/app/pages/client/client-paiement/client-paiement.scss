@@ -1,0 +1,215 @@
+// ================= VARIABLES & THEME =================
+$primary: #2563eb;
+$primary-light: rgba(37, 99, 235, 0.08);
+$success: #16a34a;
+$warning: #d97706;
+$bg-page: #f8fafc;
+$bg-card: #ffffff;
+$border-light: #e2e8f0;
+$text-main: #0f172a;
+$text-muted: #64748b;
+$radius-md: 12px;
+$radius-sm: 8px;
+$shadow-card: 0 4px 16px rgba(0, 0, 0, 0.04);
+$shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.06);
+
+:host {
+  display: block;
+  background: $bg-page;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: $text-main;
+}
+
+// ================= NAVBAR =================
+.navbar {
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid $border-light;
+  padding: 0.75rem 1rem;
+  
+  a {
+    color: $primary;
+    font-weight: 500;
+    transition: opacity 0.2s;
+    &:hover { opacity: 0.8; }
+  }
+}
+
+// ================= LAYOUT =================
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+// ================= CARDS =================
+.card {
+  border: 1px solid $border-light;
+  border-radius: $radius-md;
+  box-shadow: $shadow-card;
+  background: $bg-card;
+  transition: box-shadow 0.2s;
+  
+  .card-header {
+    background: $bg-page;
+    border-bottom: 1px solid $border-light;
+    border-radius: $radius-md $radius-md 0 0 !important;
+    padding: 1rem 1.25rem;
+    
+    h6 {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: $text-main;
+    }
+  }
+  
+  .card-body { padding: 1.25rem; }
+}
+
+// ================= RECAP GRILLE =================
+.row.g-3 > div {
+  small {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-muted;
+    margin-bottom: 0.25rem;
+  }
+  strong {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: $text-main;
+  }
+}
+
+// ================= TOTAL BOX =================
+.alert-light {
+  background: #f1f5f9;
+  border: 1px dashed $border-light;
+  border-radius: $radius-sm;
+  padding: 1rem 1.25rem;
+  
+  .fw-semibold { color: $text-muted; font-size: 0.9rem; }
+  .h4 { 
+    color: $success; 
+    font-weight: 700; 
+    letter-spacing: -0.5px;
+  }
+}
+
+// ================= MODE DE PAIEMENT (TOGGLE) =================
+.btn-group {
+  gap: 0.75rem;
+  
+  .btn-check {
+    display: none; // Cache le radio natif
+  }
+  
+  label {
+    border: 2px solid $border-light;
+    border-radius: $radius-sm;
+    background: $bg-card;
+    color: $text-muted;
+    font-weight: 500;
+    padding: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    
+    &:hover {
+      border-color: $primary;
+      background: $primary-light;
+      color: $primary;
+    }
+  }
+  
+  // État actif quand le radio est coché
+  .btn-check:checked + label {
+    border-color: $primary;
+    background: $primary-light;
+    color: $primary;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+}
+
+// ================= BOUTON & PROGRESSION =================
+.btn-primary {
+  background: $primary;
+  border: none;
+  border-radius: $radius-sm;
+  font-weight: 600;
+  padding: 0.9rem;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+  }
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.progress {
+  height: 6px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  overflow: hidden;
+  
+  .progress-bar {
+    background: $primary;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+}
+
+// ================= ÉTATS (LOADING / ERROR / SUCCESS) =================
+.spinner-border {
+  border-width: 0.25em;
+}
+
+.alert {
+  border-radius: $radius-md;
+  border: none;
+  padding: 1rem 1.25rem;
+  
+  &.alert-danger {
+    background: #fef2f2;
+    color: #dc2626;
+    border-left: 4px solid #dc2626;
+  }
+  
+  &.alert-success {
+    background: #f0fdf4;
+    color: #16a34a;
+    border-left: 4px solid #16a34a;
+  }
+}
+
+.display-1.text-success {
+  font-size: 4rem;
+  line-height: 1;
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+// ================= RESPONSIVE =================
+@media (max-width: 576px) {
+  .container { padding: 1rem 0.75rem; }
+  .card-body { padding: 1rem; }
+  .btn-group { gap: 0.5rem; }
+  label { padding: 0.7rem; font-size: 0.9rem; }
+}

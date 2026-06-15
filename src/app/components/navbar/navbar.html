@@ -1,0 +1,72 @@
+@if (isLoggedIn) {
+  <nav class="navbar">
+
+    <!-- Marque -->
+    <div class="navbar-brand">
+      <a [routerLink]="isAdmin ? '/Gestionnaire' : isGestionnaire ? '/Gestionnaire' : '/client/trajets'">
+        🚌 REBUS
+      </a>
+    </div>
+
+    <!-- Burger mobile -->
+    <button class="burger" (click)="toggleMenu()">☰</button>
+
+    <!-- Liens selon le rôle -->
+    <ul class="navbar-links" [class.ouvert]="menuOuvert">
+
+      @if (isAdmin || isGestionnaire) {
+        <li>
+          <a routerLink="/Gestionnaire" routerLinkActive="actif" (click)="menuOuvert = false">
+            Tableau de bord
+          </a>
+        </li>
+        <li>
+          <a routerLink="/gestionnaire/trajets" routerLinkActive="actif" (click)="menuOuvert = false">
+            Trajets
+          </a>
+        </li>
+        <li>
+          <a routerLink="/gestionnaire/reservations" routerLinkActive="actif" (click)="menuOuvert = false">
+            Réservations
+          </a>
+        </li>
+        <li>
+          <a routerLink="/gestionnaire/buses" routerLinkActive="actif" (click)="menuOuvert = false">
+            Bus
+          </a>
+        </li>
+      }
+
+      @if (!isAdmin && !isGestionnaire) {
+        <li>
+          <a routerLink="/client/trajets" routerLinkActive="actif" (click)="menuOuvert = false">
+            Trajets
+          </a>
+        </li>
+        <li>
+          <a routerLink="/client/reservations" routerLinkActive="actif" (click)="menuOuvert = false">
+            Mes réservations
+          </a>
+        </li>
+        <li>
+          <a routerLink="/client/profil" routerLinkActive="actif" (click)="menuOuvert = false">
+            Profil
+          </a>
+        </li>
+      }
+
+    </ul>
+
+    <!-- Info utilisateur + déconnexion -->
+    @if (user) {
+      <div class="navbar-user">
+        <span class="user-nom">👤 {{ user.username }}</span>
+        <span class="user-role">
+          {{ isAdmin ? 'Admin' : isGestionnaire ? 'Gestionnaire' : 'Client' }}
+        </span>
+        <button class="btn-logout" (click)="onLogout()">Déconnexion</button>
+      </div>
+    }
+
+  </nav>
+}

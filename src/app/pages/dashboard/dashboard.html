@@ -1,0 +1,630 @@
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="brand" (click)="setSection('tableau-bord')">
+      <span><i class="bi bi-bus-front"></i></span>
+      <strong>EasyReserve</strong>
+    </a>
+
+    <div class="role-card">
+      <small>Back-office</small>
+      <strong>Administration EasyReserve</strong>
+      <span>{{ user?.username || 'Administrateur' }}</span>
+    </div>
+
+    <nav class="admin-nav">
+      <button [class.active]="activeSection === 'tableau-bord'" (click)="setSection('tableau-bord')">
+        <i class="bi bi-speedometer2"></i>
+        Tableau de bord
+      </button>
+      @if (isAdmin()) {
+        <button [class.active]="activeSection === 'agences'" (click)="setSection('agences')">
+          <i class="bi bi-buildings"></i>
+          Agences
+        </button>
+        <button [class.active]="activeSection === 'gestionnaires'" (click)="setSection('gestionnaires')">
+          <i class="bi bi-people"></i>
+          Gestionnaires
+        </button>
+        <button [class.active]="activeSection === 'paiements'" (click)="setSection('paiements')">
+          <i class="bi bi-credit-card"></i>
+          Paiements
+          @if (paiementsEnAttente.length > 0) {
+            <span class="nav-count">{{ paiementsEnAttente.length }}</span>
+          }
+        </button>
+      }
+      @if (user?.role === 'CLIENT') {
+        <a routerLink="/client/trajets"><i class="bi bi-search"></i>Trajets</a>
+        <a routerLink="/client/reservations"><i class="bi bi-ticket-perforated"></i>Mes reservations</a>
+      }
+    </nav>
+
+    <button class="logout-btn" (click)="onLogout()">
+      <i class="bi bi-box-arrow-left"></i>
+      Deconnexion
+    </button>
+  </aside>
+
+  <main class="admin-main">
+    @if (activeSection === 'tableau-bord') {
+      <header class="page-header">
+        <div>
+          <span class="eyebrow">Pilotage global</span>
+          <h1>Tableau de bord administrateur</h1>
+          <p>Supervisez les agences, les gestionnaires, les reservations et les revenus.</p>
+        </div>
+        <button class="primary-btn" (click)="chargerStatsGlobales()">
+          <i class="bi bi-arrow-clockwise"></i>
+          Actualiser
+        </button>
+      </header>
+
+      <section class="kpi-grid">
+        <article class="kpi-card clickable" (click)="setSection('agences')">
+          <span>Agences</span>
+          <strong>{{ statsGlobales.total_agences }}</strong>
+          <small>{{ agencesDisponibles.length }} disponible(s)</small>
+        </article>
+        <article class="kpi-card clickable" (click)="setSection('gestionnaires')">
+          <span>Gestionnaires</span>
+          <strong>{{ statsGlobales.total_gestionnaires }}</strong>
+          <small>{{ gestionnaireCount.actifs }} actif(s), {{ gestionnaireCount.inactifs }} inactif(s)</small>
+        </article>
+        <article class="kpi-card">
+          <span>Reservations</span>
+          <strong>{{ statsGlobales.total_reservations }}</strong>
+          <small>{{ statsGlobales.reservations_annulees }} annulation(s)</small>
+        </article>
+        <article class="kpi-card revenue">
+          <span>Chiffre d'affaires</span>
+          <strong>{{ formatPrix(statsGlobales.chiffre_affaires) }}</strong>
+          <small>Revenus valides</small>
+        </article>
+      </section>
+
+      <section class="overview-grid">
+        <article class="table-panel">
+          <header>
+            <div>
+              <span class="eyebrow">Reseau</span>
+              <h2>Dernieres agences</h2>
+            </div>
+            <button (click)="setSection('agences')">Gerer</button>
+          </header>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Agence</th>
+                  <th>Contact</th>
+                  <th>Gestionnaire</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of agences.slice(0, 6); track a.id) {
+                  <tr>
+                    <td><strong>{{ a.nom }}</strong><small>{{ a.adresse || 'Adresse non renseignee' }}</small></td>
+                    <td>{{ a.telephone || '-' }}</td>
+                    <td>{{ a.gestionnaire_username || 'Non assigne' }}</td>
+                    <td><span [class]="a.gestionnaire ? 'status success' : 'status warning'">{{ a.gestionnaire ? 'Active' : 'Disponible' }}</span></td>
+                  </tr>
+                }
+                @if (agences.length === 0) {
+                  <tr><td colspan="4" class="empty-cell">Aucune agence enregistree.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="ops-panel">
+          <span class="eyebrow">Actions rapides</span>
+          <h2>Administration</h2>
+          <button (click)="setSection('agences'); toggleFormAgence()"><i class="bi bi-plus-circle"></i>Creer une agence</button>
+          <button (click)="setSection('gestionnaires'); toggleFormGestionnaire()"><i class="bi bi-person-plus"></i>Creer un gestionnaire</button>
+          <button (click)="setSection('gestionnaires')"><i class="bi bi-person-check"></i>Activer ou desactiver</button>
+          <button (click)="setSection('paiements')"><i class="bi bi-credit-card"></i>Verifier les paiements</button>
+        </article>
+      </section>
+    }
+
+    @if (activeSection === 'agences' && isAdmin()) {
+      <header class="page-header">
+        <div>
+          <span class="eyebrow">Gestion du reseau</span>
+          <h1>Agences</h1>
+          <p>Creer, consulter, modifier et supprimer les agences REBUS.</p>
+        </div>
+        <button class="primary-btn" (click)="toggleFormAgence()">
+          <i class="bi" [class.bi-x-lg]="showFormAgence" [class.bi-plus-lg]="!showFormAgence"></i>
+          {{ showFormAgence ? 'Fermer' : 'Nouvelle agence' }}
+        </button>
+      </header>
+
+      @if (showFormAgence) {
+        <section class="form-panel">
+          <header>
+            <span class="eyebrow">Creation</span>
+            <h2>Nouvelle agence</h2>
+          </header>
+          <form [formGroup]="agenceForm" (ngSubmit)="creerAgence()" class="form-grid">
+            <label>Nom de l'agence
+              <input type="text" formControlName="nom" placeholder="Agence Yaounde Centre">
+              @if (a_nom?.invalid && a_nom?.touched) { <small>Minimum 3 caracteres.</small> }
+            </label>
+            <label>Adresse
+              <input type="text" formControlName="adresse" placeholder="Quartier, ville">
+              @if (a_adresse?.invalid && a_adresse?.touched) { <small>Adresse requise.</small> }
+            </label>
+            <label>Telephone
+              <input type="tel" formControlName="telephone" placeholder="699000000">
+              @if (a_telephone?.invalid && a_telephone?.touched) { <small>9 a 15 chiffres.</small> }
+            </label>
+            <label>Email contact
+              <input type="email" formControlName="email_contact" placeholder="agence@rebus.com">
+            </label>
+            <div class="form-actions">
+              <button class="primary-btn" type="submit" [disabled]="agenceForm.invalid || loadingFormA">
+                {{ loadingFormA ? 'Creation...' : 'Creer l agence' }}
+              </button>
+              <button class="ghost-btn" type="button" (click)="toggleFormAgence()">Annuler</button>
+            </div>
+          </form>
+          @if (erreurFormA) { <div class="notice error">{{ erreurFormA }}</div> }
+          @if (succesFormA) { <div class="notice success">{{ succesFormA }}</div> }
+        </section>
+      }
+
+      <section class="table-panel">
+        <header>
+          <div>
+            <span class="eyebrow">{{ agences.length }} agence(s)</span>
+            <h2>Liste des agences</h2>
+          </div>
+          <button (click)="chargerAgences()"><i class="bi bi-arrow-clockwise"></i>Actualiser</button>
+        </header>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Agence</th>
+                <th>Adresse</th>
+                <th>Telephone</th>
+                <th>Gestionnaire</th>
+                <th>Statut</th>
+                <th class="actions-head">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of agences; track a.id) {
+                <tr>
+                  <td><strong>{{ a.nom }}</strong><small>{{ a.email_contact || 'Aucun email' }}</small></td>
+                  <td>{{ a.adresse || '-' }}</td>
+                  <td>{{ a.telephone || '-' }}</td>
+                  <td>{{ a.gestionnaire_username || 'Non assigne' }}</td>
+                  <td><span [class]="a.gestionnaire ? 'status success' : 'status warning'">{{ a.gestionnaire ? 'Assignee' : 'Disponible' }}</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button title="Details" (click)="voirDetailAgence(a)"><i class="bi bi-eye"></i></button>
+                      <button title="Modifier" (click)="modifierAgence(a)"><i class="bi bi-pencil"></i></button>
+                      <button class="danger" title="Supprimer" (click)="supprimerAgence(a)"><i class="bi bi-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              }
+              @if (!loadingAgences && agences.length === 0) {
+                <tr><td colspan="6" class="empty-cell">Aucune agence enregistree.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (activeSection === 'gestionnaires' && isAdmin()) {
+      <header class="page-header">
+        <div>
+          <span class="eyebrow">Comptes d'exploitation</span>
+          <h1>Gestionnaires</h1>
+          <p>Creer les gestionnaires, suivre leurs activites et controler leurs acces.</p>
+        </div>
+        <button class="primary-btn" (click)="toggleFormGestionnaire()">
+          <i class="bi" [class.bi-x-lg]="showFormGestionnaire" [class.bi-person-plus]="!showFormGestionnaire"></i>
+          {{ showFormGestionnaire ? 'Fermer' : 'Nouveau gestionnaire' }}
+        </button>
+      </header>
+
+      <section class="kpi-grid compact">
+        <article class="kpi-card">
+          <span>Total</span>
+          <strong>{{ gestionnaireCount.total }}</strong>
+          <small>Gestionnaires</small>
+        </article>
+        <article class="kpi-card">
+          <span>Actifs</span>
+          <strong>{{ gestionnaireCount.actifs }}</strong>
+          <small>Peuvent se connecter</small>
+        </article>
+        <article class="kpi-card">
+          <span>Inactifs</span>
+          <strong>{{ gestionnaireCount.inactifs }}</strong>
+          <small>Acces suspendu</small>
+        </article>
+        <article class="kpi-card">
+          <span>Agences libres</span>
+          <strong>{{ agencesDisponibles.length }}</strong>
+          <small>Disponibles pour affectation</small>
+        </article>
+      </section>
+
+      @if (showFormGestionnaire) {
+        <section class="form-panel">
+          <header>
+            <span class="eyebrow">Creation</span>
+            <h2>Nouveau gestionnaire</h2>
+          </header>
+          <form [formGroup]="gestionnaireForm" (ngSubmit)="creerGestionnaire()" class="form-grid">
+            <label>Prenom
+              <input type="text" formControlName="first_name" placeholder="Rostand">
+            </label>
+            <label>Nom
+              <input type="text" formControlName="last_name" placeholder="Nom">
+            </label>
+            <label>Nom utilisateur
+              <input type="text" formControlName="username" placeholder="rostand">
+            </label>
+            <label>Email
+              <input type="email" formControlName="email" placeholder="gestionnaire@rebus.com">
+            </label>
+            <label>Telephone
+              <input type="tel" formControlName="telephone" placeholder="699000000">
+            </label>
+            <label>Agence
+              <select formControlName="agence_id">
+                <option value="">Selectionner une agence</option>
+                @for (a of agencesDisponibles; track a.id) {
+                  <option [value]="a.id">{{ a.nom }}</option>
+                }
+              </select>
+            </label>
+            <div class="form-actions">
+              <button class="primary-btn" type="submit" [disabled]="gestionnaireForm.invalid || loadingFormG">
+                {{ loadingFormG ? 'Creation...' : 'Creer le gestionnaire' }}
+              </button>
+              <button class="ghost-btn" type="button" (click)="toggleFormGestionnaire()">Annuler</button>
+            </div>
+          </form>
+          @if (erreurFormG) { <div class="notice error">{{ erreurFormG }}</div> }
+          @if (succesFormG) { <div class="notice success">{{ succesFormG }}</div> }
+        </section>
+      }
+
+      <section class="table-panel">
+        <header>
+          <div>
+            <span class="eyebrow">{{ gestionnaires.length }} gestionnaire(s)</span>
+            <h2>Liste des gestionnaires</h2>
+          </div>
+          <button (click)="chargerGestionnaires()"><i class="bi bi-arrow-clockwise"></i>Actualiser</button>
+        </header>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Gestionnaire</th>
+                <th>Agence</th>
+                <th>Contact</th>
+                <th>Statut</th>
+                <th>Inscription</th>
+                <th class="actions-head">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (g of gestionnaires; track g.id) {
+                <tr>
+                  <td>
+                    <div class="person-cell">
+                      <span>{{ (g.first_name || g.username || 'G').charAt(0).toUpperCase() }}</span>
+                      <div>
+                        <strong>{{ g.first_name || g.username }} {{ g.last_name || '' }}</strong>
+                        <small>@{{ g.username }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ g.agence_nom || 'Aucune agence' }}</td>
+                  <td><strong>{{ g.email }}</strong><small>{{ g.telephone || '-' }}</small></td>
+                  <td><span [class]="g.is_active ? 'status success' : 'status danger'">{{ g.is_active ? 'Actif' : 'Inactif' }}</span></td>
+                  <td>{{ g.date_joined | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <div class="row-actions wide">
+                      <button title="Activites" (click)="voirActivites(g)"><i class="bi bi-activity"></i></button>
+                      <button title="Details" (click)="voirDetailGestionnaire(g)"><i class="bi bi-eye"></i></button>
+                      <button title="Modifier" (click)="modifierGestionnaire(g)"><i class="bi bi-pencil"></i></button>
+                      <button [class]="g.is_active ? 'warning' : 'success-action'" [title]="g.is_active ? 'Desactiver' : 'Activer'" (click)="toggleGestionnaireStatus(g)">
+                        <i class="bi" [class.bi-person-x]="g.is_active" [class.bi-person-check]="!g.is_active"></i>
+                      </button>
+                      <button class="danger" title="Supprimer" (click)="supprimerGestionnaire(g)"><i class="bi bi-trash"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              }
+              @if (!loadingGestionnaires && gestionnaires.length === 0) {
+                <tr><td colspan="6" class="empty-cell">Aucun gestionnaire enregistre.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (activeSection === 'paiements' && isAdmin()) {
+      <header class="page-header">
+        <div>
+          <span class="eyebrow">Controle financier</span>
+          <h1>Paiements</h1>
+          <p>{{ paiementsEnAttente.length }} paiement(s) en attente de validation.</p>
+        </div>
+        <button class="primary-btn" (click)="chargerPaiements()">
+          <i class="bi bi-arrow-clockwise"></i>
+          Actualiser
+        </button>
+      </header>
+
+      <section class="table-panel">
+        <header>
+          <div>
+            <span class="eyebrow">{{ paiements.length }} transaction(s)</span>
+            <h2>Transactions</h2>
+          </div>
+        </header>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Client</th>
+                <th>Trajet</th>
+                <th>Montant</th>
+                <th>Methode</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of paiements; track p.id) {
+                <tr>
+                  <td>#{{ p.id }}</td>
+                  <td>{{ p.client_username }}</td>
+                  <td>{{ p.trajet_info }}</td>
+                  <td><strong>{{ formatPrix(p.montant) }}</strong></td>
+                  <td>{{ getPaiementMethodLabel(p.methode) }}</td>
+                  <td><span [class]="p.statut === 'valide' ? 'status success' : p.statut === 'echoue' ? 'status danger' : 'status warning'">{{ p.statut }}</span></td>
+                  <td>
+                    @if (p.statut === 'en_attente') {
+                      <div class="inline-actions">
+                        <button class="success-action" (click)="validerPaiement(p, 'valide')">Valider</button>
+                        <button class="danger" (click)="validerPaiement(p, 'echoue')">Refuser</button>
+                      </div>
+                    } @else {
+                      <span class="muted">Traite</span>
+                    }
+                  </td>
+                </tr>
+              }
+              @if (!loadingPaiements && paiements.length === 0) {
+                <tr><td colspan="7" class="empty-cell">Aucun paiement enregistre.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  </main>
+</div>
+
+@if (showDetailAgence && agenceSelectionnee) {
+  <div class="modal-overlay" (click)="fermerDetailAgence()">
+    <section class="modal-panel" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="eyebrow">Details agence</span>
+          <h2>{{ agenceSelectionnee.nom }}</h2>
+        </div>
+        <button (click)="fermerDetailAgence()"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <div class="detail-grid">
+        <p><span>Adresse</span><strong>{{ agenceSelectionnee.adresse || '-' }}</strong></p>
+        <p><span>Telephone</span><strong>{{ agenceSelectionnee.telephone || '-' }}</strong></p>
+        <p><span>Email</span><strong>{{ agenceSelectionnee.email_contact || '-' }}</strong></p>
+        <p><span>Gestionnaire</span><strong>{{ agenceSelectionnee.gestionnaire_username || 'Aucun' }}</strong></p>
+        <p><span>Statut</span><strong>{{ agenceSelectionnee.gestionnaire ? 'Assignee' : 'Disponible' }}</strong></p>
+      </div>
+      <footer>
+        <button class="ghost-btn" (click)="fermerDetailAgence()">Fermer</button>
+        <button class="primary-btn" (click)="modifierAgence(agenceSelectionnee); fermerDetailAgence()">Modifier</button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (showModifierAgence && agenceAModifier) {
+  <div class="modal-overlay" (click)="fermerModifierAgence()">
+    <section class="modal-panel" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="eyebrow">Modification</span>
+          <h2>Modifier l'agence</h2>
+        </div>
+        <button (click)="fermerModifierAgence()"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <form [formGroup]="modifAgenceForm" (ngSubmit)="sauvegarderModificationAgence()" class="form-grid">
+        <label>Nom
+          <input type="text" formControlName="nom">
+        </label>
+        <label>Adresse
+          <input type="text" formControlName="adresse">
+        </label>
+        <label>Telephone
+          <input type="tel" formControlName="telephone">
+        </label>
+        <label>Email contact
+          <input type="email" formControlName="email_contact">
+        </label>
+        <div class="form-actions">
+          <button class="primary-btn" type="submit" [disabled]="modifAgenceForm.invalid || loadingModif">
+            {{ loadingModif ? 'Sauvegarde...' : 'Sauvegarder' }}
+          </button>
+          <button class="ghost-btn" type="button" (click)="fermerModifierAgence()">Annuler</button>
+        </div>
+      </form>
+      @if (erreurModif) { <div class="notice error">{{ erreurModif }}</div> }
+      @if (succesModif) { <div class="notice success">{{ succesModif }}</div> }
+    </section>
+  </div>
+}
+
+@if (showDetailGestionnaire && gestionnaireSelectionne) {
+  <div class="modal-overlay" (click)="fermerDetailGestionnaire()">
+    <section class="modal-panel" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="eyebrow">Details gestionnaire</span>
+          <h2>{{ gestionnaireSelectionne.first_name || gestionnaireSelectionne.username }} {{ gestionnaireSelectionne.last_name || '' }}</h2>
+        </div>
+        <button (click)="fermerDetailGestionnaire()"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <div class="detail-grid">
+        <p><span>Username</span><strong>@{{ gestionnaireSelectionne.username }}</strong></p>
+        <p><span>Email</span><strong>{{ gestionnaireSelectionne.email }}</strong></p>
+        <p><span>Telephone</span><strong>{{ gestionnaireSelectionne.telephone || '-' }}</strong></p>
+        <p><span>Agence</span><strong>{{ gestionnaireSelectionne.agence_nom || 'Aucune' }}</strong></p>
+        <p><span>Statut</span><strong>{{ gestionnaireSelectionne.is_active ? 'Actif' : 'Inactif' }}</strong></p>
+        <p><span>Inscription</span><strong>{{ gestionnaireSelectionne.date_joined | date:'dd/MM/yyyy' }}</strong></p>
+      </div>
+      <footer>
+        <button class="ghost-btn" (click)="fermerDetailGestionnaire()">Fermer</button>
+        <button class="primary-btn" (click)="voirActivites(gestionnaireSelectionne)">Voir activites</button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (showModifierGestionnaire && gestionnaireAModifier) {
+  <div class="modal-overlay" (click)="fermerModifierGestionnaire()">
+    <section class="modal-panel" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="eyebrow">Modification</span>
+          <h2>Modifier le gestionnaire</h2>
+        </div>
+        <button (click)="fermerModifierGestionnaire()"><i class="bi bi-x-lg"></i></button>
+      </header>
+      <form [formGroup]="modifGestionnaireForm" (ngSubmit)="sauvegarderModificationGestionnaire()" class="form-grid">
+        <label>Prenom
+          <input type="text" formControlName="first_name">
+        </label>
+        <label>Nom
+          <input type="text" formControlName="last_name">
+        </label>
+        <label>Nom utilisateur
+          <input type="text" formControlName="username">
+        </label>
+        <label>Email
+          <input type="email" formControlName="email">
+        </label>
+        <label>Telephone
+          <input type="tel" formControlName="telephone">
+        </label>
+        <label class="checkbox-line">
+          <input type="checkbox" formControlName="is_active">
+          Compte actif
+        </label>
+        <div class="form-actions">
+          <button class="primary-btn" type="submit" [disabled]="modifGestionnaireForm.invalid || loadingModifG">
+            {{ loadingModifG ? 'Sauvegarde...' : 'Sauvegarder' }}
+          </button>
+          <button class="ghost-btn" type="button" (click)="fermerModifierGestionnaire()">Annuler</button>
+        </div>
+      </form>
+      @if (erreurModifG) { <div class="notice error">{{ erreurModifG }}</div> }
+      @if (succesModifG) { <div class="notice success">{{ succesModifG }}</div> }
+    </section>
+  </div>
+}
+
+@if (showActivitesModal && gestionnaireSelectionne) {
+  <div class="modal-overlay" (click)="fermerActivites()">
+    <section class="modal-panel" style="max-width: 800px; width: 90%;" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="eyebrow">Activités du gestionnaire</span>
+          <h2>{{ gestionnaireSelectionne.first_name || gestionnaireSelectionne.username }} {{ gestionnaireSelectionne.last_name || '' }}</h2>
+        </div>
+        <button (click)="fermerActivites()"><i class="bi bi-x-lg"></i></button>
+      </header>
+
+      <div style="padding: 1.5rem; max-height: 60vh; overflow-y: auto;">
+        @if (loadingActivites) {
+          <div style="text-align: center; padding: 2rem;">
+            <i class="bi bi-arrow-repeat" style="font-size: 2rem; display: inline-block;"></i>
+            <p>Chargement des activités...</p>
+          </div>
+        } @else if (activitesData) {
+          <div class="kpi-grid compact" style="margin-bottom: 2rem;">
+            <article class="kpi-card">
+              <span>Réservations</span>
+              <strong>{{ activitesData.stats.total_reservations }}</strong>
+              <small>{{ activitesData.stats.reservations_confirmees }} confirmée(s)</small>
+            </article>
+            <article class="kpi-card">
+              <span>Trajets</span>
+              <strong>{{ activitesData.stats.total_trajets }}</strong>
+              <small>Gérés par l'agence</small>
+            </article>
+            <article class="kpi-card">
+              <span>Bus</span>
+              <strong>{{ activitesData.stats.total_bus }}</strong>
+              <small>Flotte disponible</small>
+            </article>
+          </div>
+
+          <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: #1e293b; font-weight: 600;">Dernières réservations</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Trajet</th>
+                  <th>Places</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of activitesData.reservations; track r.id) {
+                  <tr>
+                    <td><strong>{{ r.client_username || r.client }}</strong></td>
+                    <td>{{ r.trajet_info || r.trajet || r.trajet_id }}</td>
+                    <td>{{ r.nombre_places || 1 }} place(s)</td>
+                    <td>
+                      <span [class]="r.statut === 'confirmee' ? 'status success' : r.statut === 'annulee' ? 'status danger' : 'status warning'">
+                        {{ r.statut }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+                @if (!activitesData.reservations || activitesData.reservations.length === 0) {
+                  <tr><td colspan="4" class="empty-cell">Aucune réservation récente.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <footer>
+        <button class="ghost-btn" (click)="fermerActivites()">Fermer</button>
+      </footer>
+    </section>
+  </div>
+}

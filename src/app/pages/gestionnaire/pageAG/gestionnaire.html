@@ -1,0 +1,179 @@
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" (click)="navigateToSection('dashboard')">
+      <span><i class="bi bi-bus-front"></i></span>
+      <strong>EasyReserve</strong>
+    </a>
+    <div class="agency-box">
+      <small>Agence</small>
+      <strong>{{ agence?.nom || 'Ma gare REBUS' }}</strong>
+      <span>Espace gestionnaire</span>
+    </div>
+    <nav class="admin-menu">
+      <a routerLink="/gestionnaire" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><i class="bi bi-speedometer2"></i>Tableau de bord</a>
+      <a routerLink="/gestionnaire/trajets" routerLinkActive="active"><i class="bi bi-signpost-2"></i>Trajets et horaires</a>
+      <a routerLink="/gestionnaire/reservations" routerLinkActive="active"><i class="bi bi-ticket-perforated"></i>Reservations</a>
+      <a routerLink="/gestionnaire/buses" routerLinkActive="active"><i class="bi bi-bus-front"></i>Bus</a>
+      <a routerLink="/gestionnaire/chauffeurs" routerLinkActive="active"><i class="bi bi-person-badge"></i>Chauffeurs</a>
+      <a routerLink="/gestionnaire/paiement" routerLinkActive="active"><i class="bi bi-credit-card"></i>Paiements</a>
+    </nav>
+
+    <button class="sidebar-logout" type="button" (click)="onLogout()">
+      <i class="bi bi-box-arrow-left"></i>
+      Deconnexion
+    </button>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <div>
+        <span class="eyebrow">Back-office compagnie</span>
+        <h1>Tableau de bord</h1>
+      </div>
+      <div class="topbar-actions">
+        <button class="notification-btn" type="button" (click)="navigateToSection('reservations')" title="Notifications reservations">
+          <i class="bi bi-bell"></i>
+          <span *ngIf="pendingReservationsCount > 0">{{ pendingReservationsCount }}</span>
+        </button>
+        <div class="topbar-user">
+          <span><i class="bi bi-person-circle"></i>{{ user?.username || 'Gestionnaire' }}</span>
+        </div>
+      </div>
+    </header>
+
+    <div *ngIf="successMsg" class="notice success"><i class="bi bi-check-circle"></i>{{ successMsg }}</div>
+    <div *ngIf="errorMsg" class="notice error"><i class="bi bi-exclamation-triangle"></i>{{ errorMsg }}</div>
+    <section class="dashboard-content">
+      <div class="kpi-grid">
+        <article class="metric-card">
+          <span>Reservations</span>
+          <strong>{{ totalReservationsCount }}</strong>
+          <small>{{ pendingReservationsCount }} en attente</small>
+        </article>
+        <article class="metric-card">
+          <span>Confirmees</span>
+          <strong>{{ confirmedReservationsCount }}</strong>
+          <small>Billets valides</small>
+        </article>
+        <article class="metric-card">
+          <span>Departs aujourd'hui</span>
+          <strong>{{ departsAujourdhui }}</strong>
+          <small>Trajets a suivre</small>
+        </article>
+        <article class="metric-card revenue">
+          <span>Bus actifs</span>
+          <strong>{{ activeBusCount }}</strong>
+          <small>{{ totalBusCount }} bus enregistres</small>
+        </article>
+      </div>
+
+      <section class="panel-grid">
+        <article class="table-panel">
+          <header>
+            <div>
+              <span class="eyebrow">Depart prochain</span>
+              <h2>Liste des departs</h2>
+            </div>
+            <button type="button" (click)="navigateToSection('trajets')">Planifier</button>
+          </header>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Itineraire</th>
+                  <th>Date</th>
+                  <th>Heure</th>
+                  <th>Places</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let t of trajets.slice(0, 5)">
+                  <td><strong>{{ t.ville_depart }} - {{ t.ville_arrivee }}</strong></td>
+                  <td>{{ t.date_depart }}</td>
+                  <td>{{ t.heure_depart }}</td>
+                  <td>
+                    <span [class]="t.places_disponibles === 0 ? 'status-badge danger' : 'status-badge success'">
+                      {{ t.places_disponibles === 0 ? 'Complet' : t.places_disponibles + ' libres' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="trajets.length === 0">
+                  <td colspan="4" class="empty-cell">Aucun depart programme.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="ops-panel">
+          <span class="eyebrow">Pilotage</span>
+          <h2>Actions rapides</h2>
+          <button (click)="navigateToSection('trajets')"><i class="bi bi-plus-circle"></i>Ajouter un trajet</button>
+          <button (click)="navigateToSection('buses')"><i class="bi bi-bus-front"></i>Gerer la flotte</button>
+          <button (click)="navigateToSection('reservations')"><i class="bi bi-ticket-perforated"></i>Suivre les reservations</button>
+          <button (click)="navigateToSection('paiement')"><i class="bi bi-credit-card"></i>Verifier les paiements</button>
+        </article>
+      </section>
+
+      <section class="activity-grid">
+        <article class="activity-panel">
+          <header>
+            <div>
+              <span class="eyebrow">Journal d'activite</span>
+              <h2>Activites recentes</h2>
+            </div>
+            <button type="button" (click)="loadData()"><i class="bi bi-arrow-clockwise"></i>Actualiser</button>
+          </header>
+
+          <div class="activity-list" *ngIf="recentActivities.length > 0; else noActivity">
+            <button
+              type="button"
+              *ngFor="let activity of recentActivities"
+              [class]="getActivityClass(activity.type)"
+              (click)="navigateToSection(activity.action)">
+              <span class="activity-icon"><i [class]="'bi ' + getActivityIcon(activity.type)"></i></span>
+              <span class="activity-copy">
+                <strong>{{ activity.title }}</strong>
+                <small>{{ activity.description }}</small>
+              </span>
+              <span class="activity-meta">
+                <span [class]="getStatusClass(activity.status)">{{ getStatusLabel(activity.status) }}</span>
+                <small>{{ formatShortDate(activity.date) }}</small>
+              </span>
+            </button>
+          </div>
+
+          <ng-template #noActivity>
+            <div class="empty-activity">
+              <i class="bi bi-clock-history"></i>
+              <strong>Aucune activite recente</strong>
+              <span>Les reservations, trajets et bus apparaitront ici apres chargement.</span>
+            </div>
+          </ng-template>
+        </article>
+
+        <article class="summary-panel">
+          <span class="eyebrow">Suivi de travail</span>
+          <h2>Ce que vous devez surveiller</h2>
+          <button type="button" (click)="navigateToSection('reservations')">
+            <i class="bi bi-bell"></i>
+            <span>{{ pendingReservationsCount }} reservation(s) en attente</span>
+          </button>
+          <button type="button" (click)="navigateToSection('trajets')">
+            <i class="bi bi-calendar-event"></i>
+            <span>{{ departsAujourdhui }} depart(s) aujourd'hui</span>
+          </button>
+          <button type="button" (click)="navigateToSection('buses')">
+            <i class="bi bi-bus-front"></i>
+            <span>{{ activeBusCount }} bus actif(s)</span>
+          </button>
+          <button type="button" (click)="navigateToSection('paiement')">
+            <i class="bi bi-cash-coin"></i>
+            <span>{{ chiffreAffaires | number }} FCFA confirmes</span>
+          </button>
+        </article>
+      </section>
+    </section>
+  </main>
+</div>

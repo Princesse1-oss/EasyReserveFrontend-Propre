@@ -1,0 +1,182 @@
+<div class="admin-layout">
+  <aside class="admin-sidebar" *ngIf="!isAdminMode">
+    <a routerLink="/gestionnaire" class="admin-brand">
+      <span><i class="bi bi-bus-front"></i></span>
+      <strong>EasyReserve</strong>
+    </a>
+    <nav class="admin-menu">
+      <a routerLink="/gestionnaire"><i class="bi bi-speedometer2"></i>Tableau de bord</a>
+      <a routerLink="/gestionnaire/trajets"><i class="bi bi-signpost-2"></i>Trajets et horaires</a>
+      <a routerLink="/gestionnaire/reservations" class="active"><i class="bi bi-ticket-perforated"></i>Reservations</a>
+      <a routerLink="/gestionnaire/buses"><i class="bi bi-bus-front"></i>Bus</a>
+      <a routerLink="/gestionnaire/chauffeurs"><i class="bi bi-person-badge"></i>Chauffeurs</a>
+      <a routerLink="/gestionnaire/paiement"><i class="bi bi-credit-card"></i>Paiements</a>
+    </nav>
+
+    <button class="sidebar-logout" type="button" (click)="onLogout()">
+      <i class="bi bi-box-arrow-left"></i>
+      Deconnexion
+    </button>
+  </aside>
+
+  <main class="admin-main">
+    <header class="page-header">
+      <div class="d-flex align-items-center gap-3">
+        <button *ngIf="isAdminMode" class="btn-rebus-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left"></i> Retour
+        </button>
+        <div>
+          <span class="eyebrow">{{ isAdminMode ? 'Gestionnaire: ' + gestionnaireNom : 'Suivi client' }}</span>
+          <h1>Reservations</h1>
+          <p *ngIf="isAdminMode">Agence: {{ agenceNom }}</p>
+          <p *ngIf="!isAdminMode">Validez les demandes de billets, surveillez les places et gardez l historique des reservations.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button *ngIf="!isAdminMode" class="btn-rebus-secondary notification-btn" (click)="toggleNotifications()" title="Notifications">
+          <i class="bi bi-bell"></i>
+          <span *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+        </button>
+        <button class="btn-rebus-primary" (click)="loadData()"><i class="bi bi-arrow-clockwise"></i> Actualiser</button>
+      </div>
+    </header>
+
+    <div *ngIf="showNotifications" class="notifications-panel">
+      <div class="notifications-head">
+        <strong>Notifications operationnelles</strong>
+        <button type="button" (click)="markAllRead()">Tout marquer lu</button>
+      </div>
+      <p *ngIf="notifications.length === 0" class="muted">Aucune notification.</p>
+      <article *ngFor="let n of notifications" [class]="'notification ' + n.type">
+        <button class="close-btn" (click)="clearNotification(n.id); $event.stopPropagation()"><i class="bi bi-x"></i></button>
+        <strong>{{ n.title }}</strong>
+        <p>{{ n.message }}</p>
+        <small>{{ n.timestamp | date:'HH:mm' }}</small>
+        <button *ngIf="n.action" class="btn-rebus-secondary" (click)="n.action!.handler(); $event.stopPropagation()">
+          {{ n.action!.label }}
+        </button>
+      </article>
+    </div>
+
+    <section class="kpi-grid">
+      <article class="metric-card">
+        <span>Total reservations</span>
+        <strong>{{ stats.total }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>En attente</span>
+        <strong>{{ stats.en_attente }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Confirmees</span>
+        <strong>{{ stats.confirmee }}</strong>
+      </article>
+      <article class="metric-card revenue">
+        <span>Taux conversion</span>
+        <strong>{{ stats.taux_conversion }}%</strong>
+      </article>
+    </section>
+
+    <section class="kpi-grid secondary">
+      <article class="metric-card revenue">
+        <span>Revenu confirme</span>
+        <strong>{{ stats.revenu_confirmee | number }} FCFA</strong>
+      </article>
+      <article class="metric-card">
+        <span>Revenu potentiel</span>
+        <strong>{{ stats.revenu_potentiel | number }} FCFA</strong>
+      </article>
+      <article class="metric-card">
+        <span>Departs aujourd'hui</span>
+        <strong>{{ stats.departs_aujourd_hui }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Bus presque pleins</span>
+        <strong>{{ stats.bus_plein_alert }}</strong>
+      </article>
+    </section>
+
+    <div *ngIf="tempMessage" [class]="'notice ' + (tempMessage.type === 'danger' ? 'error' : tempMessage.type)">
+      <i class="bi" [class.bi-check-circle]="tempMessage.type === 'success'" [class.bi-exclamation-triangle]="tempMessage.type === 'danger'" [class.bi-info-circle]="tempMessage.type === 'info'"></i>
+      {{ tempMessage.text }}
+      <button type="button" (click)="tempMessage = null"><i class="bi bi-x"></i></button>
+    </div>
+
+    <section class="filter-panel">
+      <div class="form-row">
+        <label>Recherche</label>
+        <input type="text" placeholder="Nom, telephone, ville, ID..." [(ngModel)]="searchQuery" (input)="applyFilters()" />
+      </div>
+      <div class="form-row">
+        <label>Statut</label>
+        <select [(ngModel)]="filterStatut" (change)="applyFilters()">
+          <option value="all">Tous les statuts</option>
+          <option value="en_attente">En attente</option>
+          <option value="confirmee">Confirmee</option>
+          <option value="annulee">Annulee</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Date du trajet</label>
+        <input type="date" [(ngModel)]="filterDate" (change)="applyFilters()" />
+      </div>
+      <button class="btn-rebus-secondary" (click)="resetFilters()">Reinitialiser</button>
+    </section>
+
+    <section class="table-panel">
+      <header>
+        <span class="eyebrow">{{ getResultsCount() }}</span>
+        <h2>Liste des reservations</h2>
+      </header>
+
+      @if (filteredReservations.length === 0) {
+        <div class="empty-state">
+          <i class="bi bi-ticket-perforated"></i>
+          <h3>{{ loading ? 'Aucune donnee chargee pour le moment' : 'Aucune reservation trouvee' }}</h3>
+          <p>{{ loading ? 'Les reservations apparaitront ici des que le serveur repondra.' : 'Modifiez vos filtres ou actualisez les donnees.' }}</p>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Passager</th>
+                <th>Trajet</th>
+                <th>Date</th>
+                <th>Places</th>
+                <th>Total</th>
+                <th>Statut</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of filteredReservations; track r.id) {
+                <tr>
+                  <td><strong>#{{ r.id }}</strong></td>
+                  <td>
+                    <strong>{{ r.passager_nom || r.client_username }}</strong>
+                    <small>{{ r.passager_tel || 'Telephone non renseigne' }}</small>
+                  </td>
+                  <td>{{ r.trajet_detail?.ville_depart }} - {{ r.trajet_detail?.ville_arrivee }}</td>
+                  <td>{{ formatDate(r.trajet_detail?.date_depart || '') }}</td>
+                  <td>{{ r.nombre_places }}</td>
+                  <td><strong class="price">{{ formatPrice(r.trajet_detail?.prix || 0, r.nombre_places) }}</strong></td>
+                  <td><span [class]="'status-badge ' + getStatutBadgeClass(r.statut)">{{ getStatutLabel(r.statut) }}</span></td>
+                  <td class="text-end action-cell">
+                    @if (r.statut === 'en_attente') {
+                      <button class="btn-mini success" (click)="confirmerReservation(r.id)" title="Confirmer"><i class="bi bi-check-lg"></i></button>
+                      <button class="btn-mini danger" (click)="annulerReservation(r.id)" title="Annuler"><i class="bi bi-x-lg"></i></button>
+                    } @else {
+                      <span class="muted">Traitee</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </main>
+</div>

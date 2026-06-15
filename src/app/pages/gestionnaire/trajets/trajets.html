@@ -1,0 +1,175 @@
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <a routerLink="/gestionnaire" class="admin-brand">
+      <span><i class="bi bi-bus-front"></i></span>
+      <strong>EasyReserve</strong>
+    </a>
+    <nav class="admin-menu">
+      <a routerLink="/gestionnaire"><i class="bi bi-speedometer2"></i>Tableau de bord</a>
+      <a routerLink="/gestionnaire/trajets" class="active"><i class="bi bi-signpost-2"></i>Trajets et horaires</a>
+      <a routerLink="/gestionnaire/reservations"><i class="bi bi-ticket-perforated"></i>Reservations</a>
+      <a routerLink="/gestionnaire/buses"><i class="bi bi-bus-front"></i>Bus</a>
+      <a routerLink="/gestionnaire/chauffeurs"><i class="bi bi-person-badge"></i>Chauffeurs</a>
+      <a routerLink="/gestionnaire/paiement"><i class="bi bi-credit-card"></i>Paiements</a>
+    </nav>
+
+    <button class="sidebar-logout" type="button" (click)="onLogout()">
+      <i class="bi bi-box-arrow-left"></i>
+      Deconnexion
+    </button>
+  </aside>
+
+  <main class="admin-main">
+    <header class="page-header">
+      <div>
+        <span class="eyebrow">Planification</span>
+        <h1>Trajets et horaires</h1>
+        <p>Planifiez les departs, fixez les tarifs et affectez un bus disponible a chaque trajet.</p>
+      </div>
+      <button *ngIf="isAdminMode" type="button" class="btn-rebus-secondary" (click)="goBack()">Retour</button>
+    </header>
+
+    <div *ngIf="successMsg" class="notice success"><i class="bi bi-check-circle"></i>{{ successMsg }}</div>
+    <div *ngIf="errorMsg" class="notice error"><i class="bi bi-exclamation-triangle"></i>{{ errorMsg }}</div>
+
+    <section class="kpi-grid">
+      <article class="metric-card">
+        <span>Departs programmes</span>
+        <strong>{{ totalTrajets }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Taux d'occupation</span>
+        <strong>{{ tauxOccupationMoyen }}%</strong>
+      </article>
+      <article class="metric-card">
+        <span>Alerte tarif</span>
+        <strong>{{ alerteTarif }}</strong>
+      </article>
+      <article class="metric-card revenue">
+        <span>Revenu previsionnel</span>
+        <strong>{{ revenuPrevisionnel | number }} FCFA</strong>
+      </article>
+    </section>
+
+    <section class="work-grid">
+      <article class="form-panel">
+        <header>
+          <span class="eyebrow">{{ isEditing ? 'Modification' : 'Nouveau depart' }}</span>
+          <h2>{{ isEditing ? 'Modifier le trajet' : 'Planifier un trajet' }}</h2>
+        </header>
+
+        <div *ngIf="isEditing" class="edit-banner">
+          <span><i class="bi bi-pencil-square"></i>Mode edition active</span>
+          <button type="button" (click)="cancelEdit()">Annuler</button>
+        </div>
+
+        <form [formGroup]="trajetForm" (ngSubmit)="onSubmit()">
+          <div class="form-row">
+            <label>Ville de depart *</label>
+            <input type="text" formControlName="ville_depart" placeholder="Ex: Yaounde" />
+            <span class="field-error" *ngIf="trajetForm.get('ville_depart')?.invalid && trajetForm.get('ville_depart')?.touched">
+              La ville de depart est obligatoire.
+            </span>
+          </div>
+
+          <div class="form-row">
+            <label>Ville d'arrivee *</label>
+            <input type="text" formControlName="ville_arrivee" placeholder="Ex: Douala" />
+            <span class="field-error" *ngIf="trajetForm.get('ville_arrivee')?.invalid && trajetForm.get('ville_arrivee')?.touched">
+              La ville d'arrivee est obligatoire.
+            </span>
+          </div>
+
+          <div class="two-cols">
+            <div class="form-row">
+              <label>Date *</label>
+              <input type="date" formControlName="date_depart" />
+            </div>
+            <div class="form-row">
+              <label>Heure *</label>
+              <input type="time" formControlName="heure_depart" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label>Tarif du billet (FCFA) *</label>
+            <input type="number" formControlName="prix" placeholder="Ex: 5000" />
+          </div>
+
+          <div class="form-row">
+            <label>Bus disponible *</label>
+            <select formControlName="bus">
+              <option value="" disabled>Choisir un vehicule</option>
+              <option *ngFor="let b of busDisponibles" [value]="b.id">
+                {{ b.matricule | uppercase }} - {{ b.type_bus | uppercase }} - {{ b.capacite }} places
+              </option>
+            </select>
+            <p class="hint" *ngIf="busDisponibles.length === 0">
+              Aucun bus disponible. Ajoutez un bus avant de planifier ce depart.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <button type="submit" class="btn-rebus-primary" [disabled]="trajetForm.invalid || loading">
+              <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+              {{ isEditing ? 'Mettre a jour' : 'Planifier le trajet' }}
+            </button>
+            <button *ngIf="isEditing" type="button" class="btn-rebus-secondary" (click)="cancelEdit()">Annuler</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="table-panel">
+        <header>
+          <span class="eyebrow">Catalogue</span>
+          <h2>Trajets programmes</h2>
+        </header>
+
+        <div class="table-wrapper" *ngIf="trajets.length > 0; else videBlock">
+          <table>
+            <thead>
+              <tr>
+                <th>Itineraire</th>
+                <th>Horaire</th>
+                <th>Tarif</th>
+                <th>Bus</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of trajets">
+                <td>
+                  <strong>{{ t.ville_depart }} - {{ t.ville_arrivee }}</strong>
+                  <span *ngIf="t.statut_depart === 'parti'" class="status-badge danger">Parti</span>
+                </td>
+                <td>{{ formatDate(t.date_depart) }} a {{ t.heure_depart }}</td>
+                <td><strong class="price">{{ t.prix | number }} FCFA</strong></td>
+                <td>
+                  <span class="bus-chip">{{ t.bus_matricule || 'Bus #' + t.bus }}</span>
+                  <span class="places-chip" [class.ok]="t.places_disponibles > 5" [class.warn]="t.places_disponibles <= 5 && t.places_disponibles > 0" [class.zero]="t.places_disponibles === 0">
+                    {{ t.places_disponibles }} pl.
+                  </span>
+                </td>
+                <td class="text-end action-cell">
+                  <button *ngIf="t.statut_depart !== 'parti'" class="btn-mini success" (click)="confirmerDepart(t)" title="Confirmer le depart">
+                    Depart
+                  </button>
+                  <button class="btn-mini" (click)="editTrajet(t)" title="Modifier"><i class="bi bi-pencil"></i></button>
+                  <button class="btn-mini danger" (click)="deleteTrajet(t)" title="Supprimer"><i class="bi bi-trash"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #videBlock>
+          <div class="empty-state">
+            <i class="bi bi-calendar-x"></i>
+            <h3>Aucun trajet programme</h3>
+            <p>Ajoutez un depart pour commencer a vendre des billets.</p>
+          </div>
+        </ng-template>
+      </article>
+    </section>
+  </main>
+</div>

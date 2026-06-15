@@ -1,0 +1,154 @@
+<!-- Navbar -->
+<nav class="navbar navbar-expand navbar-light bg-white shadow-sm px-3 py-2">
+  <a routerLink="/client/trajets" class="text-decoration-none d-flex align-items-center">
+    <i class="bi bi-arrow-left-circle text-primary me-2"></i>
+    <span class="fw-semibold">Retour</span>
+  </a>
+  <span class="ms-auto text-muted small">Espace Client</span>
+</nav>
+
+<div class="container py-4">
+  
+  <!-- LOADING STATE -->
+  @if (loading) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+      <p class="text-muted mt-3 mb-0">Chargement du récapitulatif...</p>
+      <small class="text-muted">Réservation #{{ reservationId }}</small>
+    </div>
+  }
+
+  <!-- ERROR STATE -->
+  @else if (errorText) {
+    <div class="alert alert-danger shadow-sm">
+      <h6 class="fw-bold mb-2">
+        <i class="bi bi-exclamation-triangle me-2"></i>Erreur
+      </h6>
+      <p class="mb-0">{{ errorText }}</p>
+    </div>
+    <div class="text-center mt-4">
+      <button class="btn btn-primary me-2" (click)="retry()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Réessayer
+      </button>
+      <button class="btn btn-outline-secondary" routerLink="/client/trajets">
+        Retour aux trajets
+      </button>
+    </div>
+  }
+
+  <!-- SUCCESS STATE -->
+  @else if (success) {
+    <div class="text-center py-5">
+      <div class="display-1 text-success mb-3">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <h4 class="fw-bold mb-2">Paiement confirmé !</h4>
+      <p class="text-muted mb-4">Votre réservation #{{ reservationId }} est validée.</p>
+      
+      <div class="alert alert-success mb-4">
+        <i class="bi bi-phone me-2"></i>
+        <strong>SMS envoyé au {{ reservation?.passager_tel }}</strong>
+        <br>
+        <small class="text-muted">Billet électronique en route.</small>
+      </div>
+
+      <div class="d-grid gap-2" style="max-width: 300px; margin: 0 auto;">
+        <button class="btn btn-primary btn-sm" routerLink="/client/reservations">
+          <i class="bi bi-list-check me-2"></i>Mes réservations
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" routerLink="/client/trajets">
+          Nouvelle recherche
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- PAYMENT FORM STATE -->
+  @else if (reservation) {
+    
+    <!-- Recap Card -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-receipt text-primary me-2"></i>Récapitulatif #{{ reservationId }}
+        </h6>
+      </div>
+      <div class="card-body p-3">
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <small class="text-muted d-block">Trajet</small>
+            <strong class="text-primary d-block">{{ getRoute() }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Date & Heure</small>
+            <strong class="d-block">{{ getDate() }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Passager</small>
+            <strong class="d-block">{{ reservation.passager_nom || 'N/A' }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Téléphone</small>
+            <strong class="d-block">{{ reservation.passager_tel || 'N/A' }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Nombre de places</small>
+            <strong class="d-block">{{ reservation.nombre_places || 1 }}</strong>
+          </div>
+          <div class="col-6">
+            <small class="text-muted d-block">Prix unitaire</small>
+            <strong class="d-block">{{ getPriceFormatted() }}</strong>
+          </div>
+        </div>
+        
+        <div class="alert alert-light border d-flex justify-content-between align-items-center py-3 mb-0">
+          <span class="fw-semibold">Total à payer</span>
+          <span class="h4 text-success mb-0 fw-bold">{{ getTotalFormatted() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Method Card -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-semibold">
+          <i class="bi bi-wallet2 text-primary me-2"></i>Mode de paiement
+        </h6>
+      </div>
+      <div class="card-body p-3">
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="method" id="om" value="orange_money" 
+                 [checked]="selectedMethod === 'orange_money'" (change)="selectedMethod = 'orange_money'">
+          <label class="btn btn-outline-warning btn-sm flex-fill" for="om">
+            🟠 Orange Money
+          </label>
+
+          <input type="radio" class="btn-check" name="method" id="mtn" value="mtn_momo" 
+                 [checked]="selectedMethod === 'mtn_momo'" (change)="selectedMethod = 'mtn_momo'">
+          <label class="btn btn-outline-warning btn-sm flex-fill" for="mtn">
+            🟡 MTN MoMo
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pay Button -->
+    <button class="btn btn-primary w-100 btn-lg" [disabled]="processing || success" (click)="simulatePayment()">
+      @if (processing) {
+        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+        {{ progressText }} ({{ progress }}%)
+      } @else {
+        <i class="bi bi-shield-lock me-2"></i>Simuler le paiement
+      }
+    </button>
+
+    <!-- Progress Bar -->
+    @if (progress > 0 && !success) {
+      <div class="progress mt-3" style="height: 8px;">
+        <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" 
+             [style.width.%]="progress"></div>
+      </div>
+      <small class="text-muted text-center d-block mt-2">{{ progressText }}</small>
+    }
+  }
+</div>

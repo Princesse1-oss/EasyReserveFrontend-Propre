@@ -1,0 +1,187 @@
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <a routerLink="/gestionnaire" class="admin-brand">
+      <span><i class="bi bi-bus-front"></i></span>
+      <strong>EasyReserve</strong>
+    </a>
+    <nav class="admin-menu">
+      <a routerLink="/gestionnaire"><i class="bi bi-speedometer2"></i>Tableau de bord</a>
+      <a routerLink="/gestionnaire/trajets"><i class="bi bi-signpost-2"></i>Trajets et horaires</a>
+      <a routerLink="/gestionnaire/reservations"><i class="bi bi-ticket-perforated"></i>Reservations</a>
+      <a routerLink="/gestionnaire/buses"><i class="bi bi-bus-front"></i>Bus</a>
+      <a routerLink="/gestionnaire/chauffeurs" class="active"><i class="bi bi-person-badge"></i>Chauffeurs</a>
+      <a routerLink="/gestionnaire/paiement"><i class="bi bi-credit-card"></i>Paiements</a>
+    </nav>
+
+    <button class="sidebar-logout" type="button" (click)="onLogout()">
+      <i class="bi bi-box-arrow-left"></i>
+      Deconnexion
+    </button>
+  </aside>
+
+  <main class="admin-main">
+    <header class="page-header">
+      <div>
+        <span class="eyebrow">Ressources humaines</span>
+        <h1>Chauffeurs</h1>
+        <p>Gerez les chauffeurs, leurs permis, leurs statuts et l affectation aux bus de la compagnie.</p>
+      </div>
+      <button class="btn-rebus-primary" (click)="toggleForm()">
+        <i class="bi" [class.bi-x-lg]="showForm" [class.bi-plus-lg]="!showForm"></i>
+        {{ showForm ? 'Annuler' : 'Nouveau chauffeur' }}
+      </button>
+    </header>
+
+    <section class="kpi-grid">
+      <article class="metric-card revenue"><span>Actifs</span><strong>{{ statsActifs }}</strong></article>
+      <article class="metric-card"><span>Inactifs</span><strong>{{ statsInactifs }}</strong></article>
+      <article class="metric-card"><span>En conge</span><strong>{{ statsConge }}</strong></article>
+      <article class="metric-card"><span>Total chauffeurs</span><strong>{{ statsTotal }}</strong></article>
+    </section>
+
+    @if (successMsg) {
+      <div class="notice success"><i class="bi bi-check-circle"></i>{{ successMsg }}</div>
+    }
+    @if (errorMsg) {
+      <div class="notice error"><i class="bi bi-exclamation-triangle"></i>{{ errorMsg }}</div>
+    }
+
+    @if (showForm) {
+      <section class="form-panel">
+        <header>
+          <span class="eyebrow">{{ isEditMode ? 'Modification' : 'Creation' }}</span>
+          <h2>{{ isEditMode ? 'Modifier le chauffeur' : 'Nouveau chauffeur' }}</h2>
+        </header>
+        <form [formGroup]="chauffeurForm" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <div class="form-row">
+              <label>Prenom *</label>
+              <input type="text" formControlName="prenom" placeholder="Ex: Jean"/>
+              @if (f['prenom'].invalid && f['prenom'].touched) {
+                <span class="field-error">Minimum 2 caracteres.</span>
+              }
+            </div>
+            <div class="form-row">
+              <label>Nom *</label>
+              <input type="text" formControlName="nom" placeholder="Ex: Dupont"/>
+              @if (f['nom'].invalid && f['nom'].touched) {
+                <span class="field-error">Minimum 2 caracteres.</span>
+              }
+            </div>
+            <div class="form-row">
+              <label>Telephone *</label>
+              <input type="tel" formControlName="telephone" placeholder="Ex: 699123456"/>
+              @if (f['telephone'].invalid && f['telephone'].touched) {
+                <span class="field-error">Format invalide, 9 a 15 chiffres.</span>
+              }
+            </div>
+            <div class="form-row">
+              <label>Email</label>
+              <input type="email" formControlName="email" placeholder="chauffeur@rebus.cm"/>
+            </div>
+            <div class="form-row">
+              <label>Numero de permis *</label>
+              <input type="text" formControlName="numero_permis" placeholder="Ex: PERM-2026-001"/>
+            </div>
+            <div class="form-row">
+              <label>Statut *</label>
+              <select formControlName="statut">
+                <option value="actif">Actif</option>
+                <option value="inactif">Inactif</option>
+                <option value="conge">En conge</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Bus assigne</label>
+              <select formControlName="bus_assigne">
+                <option [value]="null">Aucun bus</option>
+                @for (b of buses; track b.id) {
+                  <option [value]="b.id">{{ b.matricule }} ({{ b.type_bus }})</option>
+                }
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Date d'embauche</label>
+              <input type="date" formControlName="date_embauche"/>
+            </div>
+          </div>
+          <div class="actions-row">
+            <button type="button" class="btn-rebus-secondary" (click)="cancelEdit()">Annuler</button>
+            <button type="submit" class="btn-rebus-primary" [disabled]="chauffeurForm.invalid">
+              {{ isEditMode ? 'Mettre a jour' : 'Creer le chauffeur' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <section class="filter-panel">
+      <div class="form-row">
+        <label>Recherche</label>
+        <input type="text" placeholder="Nom, telephone, permis..." [(ngModel)]="searchQuery" (input)="applyFilters()" />
+      </div>
+      <div class="form-row">
+        <label>Statut</label>
+        <select [(ngModel)]="filterStatut" (change)="applyFilters()">
+          <option value="all">Tous les statuts</option>
+          <option value="actif">Actif</option>
+          <option value="inactif">Inactif</option>
+          <option value="conge">En conge</option>
+        </select>
+      </div>
+      <button class="btn-rebus-secondary" (click)="resetFilters()">Reinitialiser</button>
+    </section>
+
+    <section class="table-panel">
+      <header>
+        <span class="eyebrow">Registre chauffeurs</span>
+        <h2>{{ filteredChauffeurs.length }} chauffeur(s)</h2>
+      </header>
+
+      @if (loading) {
+        <div class="empty-state"><span class="spinner-border text-primary"></span><p>Chargement des chauffeurs...</p></div>
+      } @else if (filteredChauffeurs.length === 0) {
+        <div class="empty-state">
+          <i class="bi bi-person-badge"></i>
+          <h3>Aucun chauffeur trouve</h3>
+          <p>Ajoutez un chauffeur ou modifiez les filtres.</p>
+        </div>
+      } @else {
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Chauffeur</th>
+                <th>Telephone</th>
+                <th>Permis</th>
+                <th>Bus assigne</th>
+                <th>Statut</th>
+                <th>Embauche</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of filteredChauffeurs; track c.id) {
+                <tr>
+                  <td>
+                    <strong>{{ c.prenom }} {{ c.nom }}</strong>
+                    @if (c.email) { <small>{{ c.email }}</small> }
+                  </td>
+                  <td>{{ c.telephone }}</td>
+                  <td><code>{{ c.numero_permis }}</code></td>
+                  <td>{{ getBusMatricule(c.bus_assigne) }}</td>
+                  <td><span [class]="'status-badge ' + cleanStatutClass(c.statut)">{{ cleanStatutLabel(c.statut) }}</span></td>
+                  <td>{{ c.date_embauche ? (c.date_embauche | date:'dd/MM/yyyy') : 'Non renseignee' }}</td>
+                  <td class="text-end action-cell">
+                    <button class="btn-mini" (click)="editChauffeur(c)" title="Modifier"><i class="bi bi-pencil"></i></button>
+                    <button class="btn-mini danger" (click)="deleteChauffeur(c)" title="Supprimer"><i class="bi bi-trash"></i></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </main>
+</div>

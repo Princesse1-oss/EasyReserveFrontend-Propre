@@ -1,0 +1,202 @@
+<!-- Navbar -->
+<nav class="navbar-detail">
+  <a routerLink="/client/trajets" class="btn-retour">
+    ← Retour aux trajets
+  </a>
+  <span class="navbar-label">Espace Client</span>
+</nav>
+
+<div class="detail-container">
+
+  <!-- LOADING -->
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Chargement du trajet...</p>
+    </div>
+  }
+
+  <!-- ERREUR -->
+  @else if (errorText) {
+    <div class="error-state">
+      <p>⚠️ {{ errorText }}</p>
+      <button class="btn-primary" (click)="retry()">Réessayer</button>
+    </div>
+  }
+
+  <!-- CONTENU -->
+  @else if (trajet) {
+
+    <!-- HEADER TRAJET -->
+    <div class="trajet-header">
+      <div class="trajet-route">
+        <span class="ville">{{ trajet.ville_depart }}</span>
+        <span class="fleche">→</span>
+        <span class="ville">{{ trajet.ville_arrivee }}</span>
+      </div>
+      <div class="trajet-meta">
+        <span>📅 {{ formatDate(trajet.date_depart) }}</span>
+        <span>🕐 {{ trajet.heure_depart }}</span>
+        <span>🚌 {{ trajet.bus_details?.type_bus || 'Standard' }}</span>
+        @if (trajet.statut_depart === 'parti') {
+          <span class="badge-parti">🚦 Parti</span>
+        }
+      </div>
+
+      <div class="trajet-badges">
+        <span class="badge-prix">{{ formatPrice(trajet.prix) }} / personne</span>
+        <span [class]="trajet.places_disponibles > 0 ? 'badge-dispo' : 'badge-complet'">
+          {{ trajet.places_disponibles > 0 ? (trajet.places_disponibles + ' places disponibles') : 'Complet' }}
+        </span>
+      </div>
+    </div>
+
+    @if (trajet.statut_depart === 'parti') {
+      <div class="alerte-depart">
+        🚌 Ce trajet est déjà parti. Les réservations sont fermées.
+      </div>
+    }
+
+    @else if (trajet.places_disponibles === 0) {
+      <div class="alerte-complet">
+        ⚠️ Ce trajet est complet. Aucune place disponible.
+      </div>
+    }
+
+    @else {
+      <div class="detail-grid">
+
+        <!-- COLONNE GAUCHE : Plan de siège + Formulaire -->
+        <div class="colonne-gauche">
+
+          <!-- PLAN DE SIÈGE -->
+          <div class="carte">
+            <h3 class="carte-titre">🪑 Plan du bus</h3>
+
+            @if (loadingSieges) {
+              <div class="loading-mini"><div class="spinner-mini"></div> Chargement des sièges...</div>
+            } @else if (sieges.length > 0) {
+              <div class="legende">
+                <span class="siege-libre-demo">Disponible</span>
+                <span class="siege-occupe-demo">Occupé</span>
+              </div>
+
+              <!-- Allée avant -->
+              <div class="bus-avant">🚗 Chauffeur</div>
+
+              <!-- Grille des sièges (4 par rangée : 2 + allée + 2) -->
+              <div class="bus-grille">
+                @for (rangee of siegesParRangees; track $index) {
+                  <div class="rangee">
+                    <!-- 2 sièges gauche -->
+                    <div class="sieges-gauche">
+                      @for (siege of rangee.slice(0, 2); track siege.id) {
+                        <div [class]="siege.disponible ? 'siege siege-libre' : 'siege siege-occupe'"
+                             [title]="'Siège ' + siege.numero_siege + (siege.disponible ? ' - Disponible' : ' - Occupé')">
+                          {{ siege.numero_siege }}
+                        </div>
+                      }
+                    </div>
+                    <!-- Allée -->
+                    <div class="allee"></div>
+                    <!-- 2 sièges droite -->
+                    <div class="sieges-droite">
+                      @for (siege of rangee.slice(2, 4); track siege.id) {
+                        <div [class]="siege.disponible ? 'siege siege-libre' : 'siege siege-occupe'"
+                             [title]="'Siège ' + siege.numero_siege + (siege.disponible ? ' - Disponible' : ' - Occupé')">
+                          {{ siege.numero_siege }}
+                        </div>
+                      }
+                    </div>
+                    <!-- Numéro rangée -->
+                    <small class="num-rangee">R{{ $index + 1 }}</small>
+                  </div>
+                }
+              </div>
+
+              <p class="siege-summary">
+                <strong>{{ siegesDisponiblesCount }}</strong> siège(s) disponible(s)
+                sur <strong>{{ sieges.length }}</strong> total
+              </p>
+            } @else {
+              <p class="text-muted small">Plan des sièges non disponible.</p>
+            }
+          </div>
+
+          <!-- FORMULAIRE RÉSERVATION -->
+          <div class="carte">
+            <div class="carte-header">
+              <h3 class="carte-titre">🎫 Réservation</h3>
+              <small>Connecté : <strong>{{ getUserName() }}</strong></small>
+            </div>
+
+            <form [formGroup]="reservationForm" (ngSubmit)="onSubmit()">
+
+              <!-- Téléphone -->
+              <div class="champ">
+                <label>Numéro de téléphone *</label>
+                <input type="tel" formControlName="passager_tel"
+                       class="input" placeholder="Ex: 699123456" />
+                @if (f['passager_tel'].invalid && f['passager_tel'].touched) {
+                  <small class="erreur-champ">Format invalide (9 à 15 chiffres)</small>
+                }
+              </div>
+
+              <!-- Nombre de places -->
+              <div class="champ">
+                <label>Nombre de places</label>
+                <div class="counter-groupe">
+                  <button type="button" class="btn-counter"
+                          (click)="decrementPlaces()"
+                          [disabled]="(reservationForm.value.nombre_places || 0) <= 1">−</button>
+                  <input type="number" formControlName="nombre_places"
+                         class="input input-counter" readonly />
+                  <button type="button" class="btn-counter"
+                          (click)="incrementPlaces()"
+                          [disabled]="(reservationForm.value.nombre_places || 0) >= trajet.places_disponibles">+</button>
+                  <small class="max-info">Max : {{ trajet.places_disponibles }}</small>
+                </div>
+              </div>
+
+              <!-- Total -->
+              <div class="total-ligne">
+                <span>Total à payer</span>
+                <span class="total-montant">{{ calculateTotal() }}</span>
+              </div>
+
+              <!-- Bouton -->
+              <button type="submit" class="btn-reserver"
+                      [disabled]="reservationForm.invalid || processing">
+                @if (processing) {
+                  <span class="spinner-mini"></span> Traitement...
+                } @else {
+                  💳 Confirmer & Payer
+                }
+              </button>
+
+            </form>
+          </div>
+
+        </div>
+
+        <!-- COLONNE DROITE : Résumé -->
+        <div class="colonne-droite">
+          <div class="carte carte-resume">
+            <h3 class="carte-titre">📋 Résumé</h3>
+            <div class="resume-prix">{{ formatPrice(trajet.prix) }}</div>
+            <small>par personne</small>
+            <hr />
+            <div class="resume-detail">
+              <p><strong>Agence :</strong> {{ trajet.agence_nom || trajet.bus_details?.agence_nom || 'Non spécifiée' }}</p>
+              <p><strong>Type de bus :</strong> {{ trajet.bus_details?.type_bus || 'Standard' }}</p>
+              <p><strong>Capacité :</strong> {{ trajet.bus_details?.capacite || '—' }} places</p>
+              <p><strong>Départ :</strong> {{ trajet.heure_depart }}</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    }
+
+  }
+</div>

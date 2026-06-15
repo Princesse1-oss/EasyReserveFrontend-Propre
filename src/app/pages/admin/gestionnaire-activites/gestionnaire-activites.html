@@ -1,0 +1,178 @@
+<div class="activites-container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <button class="btn-retour" (click)="goBack()">
+      ← Retour
+    </button>
+
+    <div class="header-info">
+      <h1>Activités du Gestionnaire</h1>
+      <h2>{{ gestionnaireNom }}</h2>
+      <p>Agence : <strong>{{ agenceNom }}</strong></p>
+    </div>
+  </div>
+
+  <!-- BOUTONS D'ACTION RAPIDE -->
+  <div *ngIf="!loading && !erreur" class="action-buttons">
+    <button class="action-btn" (click)="goToTrajets()">
+      🚌 Voir les trajets
+    </button>
+    <button class="action-btn" (click)="goToReservations()">
+      📋 Voir les réservations
+    </button>
+    <button class="action-btn" (click)="goToBuses()">
+      🚐 Voir les bus
+    </button>
+  </div>
+
+  <!-- ERREUR -->
+  <div *ngIf="erreur" class="alert-erreur">
+    <span>⚠️ {{ erreur }}</span>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="loading && !erreur" class="loading">
+    <div class="spinner"></div>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <!-- CONTENU -->
+  <div *ngIf="!loading && !erreur">
+
+    <!-- CARTES STATISTIQUES -->
+    <div class="cards-grid">
+
+      <div class="card revenue">
+        <h3>Chiffre d'affaires</h3>
+        <p>{{ formatPrix(statistiques.chiffre_affaires) }}</p>
+      </div>
+
+      <div class="card reservations">
+        <h3>Réservations</h3>
+        <p>{{ statistiques.total_reservations }}</p>
+      </div>
+
+      <div class="card billets">
+        <h3>Billets vendus</h3>
+        <p>{{ statistiques.total_billets }}</p>
+      </div>
+
+      <div class="card trajets">
+        <h3>Trajets</h3>
+        <p>{{ statistiques.total_trajets }}</p>
+      </div>
+
+      <div class="card bus">
+        <h3>Bus</h3>
+        <p>{{ statistiques.total_bus }}</p>
+      </div>
+
+      <div class="card occupation">
+        <h3>Taux d'occupation</h3>
+        <p>{{ statistiques.taux_occupation }} %</p>
+        <div class="progress">
+          <div class="progress-bar" [style.width.%]="statistiques.taux_occupation"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DERNIÈRES RÉSERVATIONS -->
+    <div class="section" *ngIf="reservations.length > 0">
+      <h3 class="section-title">📋 Dernières réservations</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Client</th>
+            <th>Trajet</th>
+            <th>Places</th>
+            <th>Statut</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of reservations">
+            <td>{{ r.id }}</td>
+            <td>{{ r.client_username || r.client?.username || '—' }}</td>
+            <td>
+              {{ r.trajet_detail?.ville_depart || '—' }}
+              →
+              {{ r.trajet_detail?.ville_arrivee || '—' }}
+            </td>
+            <td>{{ r.nombre_places }}</td>
+            <td>
+              <span [class]="'badge badge-' + r.statut">
+                {{ r.statut === 'confirmee' ? '✅ Confirmée' : r.statut === 'annulee' ? '❌ Annulée' : '⏳ En attente' }}
+              </span>
+            </td>
+            <td>{{ r.date_reservation | date:'dd/MM/yyyy' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" *ngIf="reservations.length === 0">
+      <p>Aucune réservation enregistrée.</p>
+    </div>
+
+    <!-- TRAJETS -->
+    <div class="section" *ngIf="trajets.length > 0">
+      <h3 class="section-title">🚌 Trajets récents</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Départ</th>
+            <th>Arrivée</th>
+            <th>Date</th>
+            <th>Heure</th>
+            <th>Prix</th>
+            <th>Places dispo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of trajets">
+            <td>{{ t.id }}</td>
+            <td>{{ t.ville_depart }}</td>
+            <td>{{ t.ville_arrivee }}</td>
+            <td>{{ t.date_depart | date:'dd/MM/yyyy' }}</td>
+            <td>{{ t.heure_depart }}</td>
+            <td>{{ formatPrix(t.prix) }}</td>
+            <td>{{ t.places_disponibles }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- BUS -->
+    <div class="section" *ngIf="buses.length > 0">
+      <h3 class="section-title">🚌 Parc de bus</h3>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Matricule</th>
+            <th>Type</th>
+            <th>Capacité</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let b of buses">
+            <td><strong>{{ b.matricule }}</strong></td>
+            <td>{{ b.type_bus }}</td>
+            <td>{{ b.capacite }} places</td>
+            <td>
+              <span [class]="b.is_active !== false ? 'badge badge-confirmee' : 'badge badge-annulee'">
+                {{ b.is_active !== false ? '✅ Actif' : '❌ Inactif' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
